@@ -1,9 +1,50 @@
-import { expect, test } from 'vitest'
+import { it, beforeAll, afterAll, describe, expect } from 'vitest'
+import { app } from '../src/app'
+import request from 'supertest'
 
-test('O usuário consegue criar uma nova transação', () => {
-  // fazer  a chamada HTTP p/ criar uma nova transação
+describe('Transactions routes', () => {
+  beforeAll(async () => {
+    await app.ready()
+  })
 
-  const responseStatusCode = 201
-  // validação
-  expect(responseStatusCode).toEqual(201)
+  afterAll(async () => {
+    await app.close()
+  })
+
+  it('should be able to create a new transaction', async () => {
+    await request(app.server)
+      .post('/transactions')
+      .send({
+        title: 'New Transaction',
+        amount: 5000,
+        type: 'credit',
+      })
+      .expect(201)
+  })
+
+  it('should be able to list all transactions', async () => {
+    const createTransactionResponse = await request(app.server)
+      .post('/transactions')
+      .send({
+        title: 'New Transaction',
+        amount: 5000,
+        type: 'credit',
+      })
+
+    const cookies = createTransactionResponse.get('Set-Cookie')
+
+    const listTransactionsResponse = await request(app.server)
+      .get('/transactions')
+      .set('Cookie', cookies)
+      .expect(200)
+
+    console.log(listTransactionsResponse.body)
+
+    expect(listTransactionsResponse.body.transactions).toEqual([
+      expect.objectContaining({
+        title: 'New Transaction',
+        amount: 5000,
+      }),
+    ])
+  })
 })
